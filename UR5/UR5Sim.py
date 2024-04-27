@@ -11,10 +11,12 @@ from attrdict import AttrDict
 
 ROBOT_URDF_PATH = "./ur_e_description/urdf/ur5e.urdf"
 TABLE_URDF_PATH = os.path.join(pybullet_data.getDataPath(), "table/table.urdf")
+X_URDF_PATH = "./ur_e_description/urdf/x.urdf"
+O_URDF_PATH = "./ur_e_description/urdf/o.urdf"
 
 class UR5Sim():
   
-    def __init__(self, camera_attached=False):
+    def __init__(self, camera_attached=True):
         pybullet.connect(pybullet.GUI)
         pybullet.setRealTimeSimulation(True)
         
@@ -47,6 +49,8 @@ class UR5Sim():
         flags = pybullet.URDF_USE_SELF_COLLISION
         table = pybullet.loadURDF(TABLE_URDF_PATH, [0.5, 0, -0.6300], [0, 0, 0, 1])
         robot = pybullet.loadURDF(ROBOT_URDF_PATH, [0, 0, 0], [0, 0, 0, 1], flags=flags)
+        # x_marker = pybullet.loadURDF(X_URDF_PATH, [0.5, 0.5, 0.5], [0, 0, 0, 1])
+        # o_piece = pybullet.loadURDF(O_URDF_PATH, [0.6, 0.4, 0.0], [0, 0, 0, 1])
         return robot
     
 
@@ -123,16 +127,68 @@ class UR5Sim():
         linkstate = pybullet.getLinkState(self.ur5, self.end_effector_index, computeForwardKinematics=True)
         position, orientation = linkstate[0], linkstate[1]
         return (position, orientation)
+    
+    def ur_camera(self):
+        # Get current position and orientation of the end effector
+        end_effector_state = pybullet.getLinkState(self.ur5, self.end_effector_index, computeForwardKinematics=True)
+        end_effector_pos = end_effector_state[4]  # Position of the end effector
+        end_effector_orn = end_effector_state[5]  # Orientation of the end effector
+
+        # Convert orientation to a rotation matrix
+        rot_matrix = np.array(pybullet.getMatrixFromQuaternion(end_effector_orn)).reshape(3, 3)
+
+        # Camera's viewing direction (forward vector)
+        camera_view_vector = rot_matrix.dot(np.array([1, 0, 0]))
+        
+        # Set the camera position slightly behind the end effector to avoid being blocked by it
+        camera_eye_offset = -0.1  # This is an offset to move the camera back slightly
+        camera_eye_position = np.array(end_effector_pos) - camera_view_vector * camera_eye_offset
+
+        # Set the target position a little ahead of the end effector
+        target_distance = 4  # Distance ahead of the camera to look at
+        camera_target_position = np.array(end_effector_pos) + camera_view_vector * target_distance
+
+        # Define the camera's 'up' vector. Assuming y-axis of end effector is the 'up' for the camera.
+        camera_up_vector = rot_matrix.dot(np.array([0, 1, 0]))
+
+        # Compute view matrix
+        view_matrix = pybullet.computeViewMatrix(camera_eye_position, camera_target_position, camera_up_vector)
+
+        # Define camera projection matrix
+        aspect_ratio = 1.0
+        near_plane = 0.01
+        far_plane = 1.0
+        fov = 60  # Field of View in degrees
+
+        projection_matrix = pybullet.computeProjectionMatrixFOV(fov, aspect_ratio, near_plane, far_plane)
+
+        # Get the camera image
+        rgb_img = pybullet.getCameraImage(1000, 1000, viewMatrix=view_matrix, projectionMatrix=projection_matrix,renderer=pybullet.ER_TINY_RENDERER)
+        
+        return rgb_img
+    
+    def move_to(self, position):
+        joint_angles = self.calculate_ik(position, [0, math.pi/2, 0])
+        self.set_joint_angles(joint_angles)
+
 
 def demo_simulation():
     """ Demo program showing how to use the sim """
     sim = UR5Sim()
     sim.add_gui_sliders()
+    x, y, z, Rx, Ry, Rz = sim.read_gui_sliders()
+    joint_angles = sim.calculate_ik([x, y, z], [Rx, Ry, Rz])
+    sim.set_joint_angles(joint_angles)
+
+    pickPlace = [(0.6, 0.4, 0.6), (0.6, 0.4, 0.3), (0.6, 0.4, 0.6), (0.6, -0.4, 0.6), (0.6, -0.4, 0.3), (0.6, -0.4, 0.6)]
+
     while True:
-        x, y, z, Rx, Ry, Rz = sim.read_gui_sliders()
-        joint_angles = sim.calculate_ik([x, y, z], [Rx, Ry, Rz])
-        sim.set_joint_angles(joint_angles)
-        sim.check_collisions()
+        for i in pickPlace:
+            sim.move_to(i)
+            sim.ur_camera()
+            sim.check_collisions()
+            time.sleep(1)
+            print(sim.get_current_pose())
 
 if __name__ == "__main__":
     demo_simulation()

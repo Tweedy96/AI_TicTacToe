@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<robot name="x_object">
+  <material name="red">
+    <color rgba="1 0 0 1"/>
+  </material>
+
+  <link name="x_link">
+    <!-- First Cylinder (Part of the X) -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0.785398"/> <!-- Rotate 45 degrees -->
+      <geometry>
+        <cylinder length="0.1" radius="0.05"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0.785398"/> <!-- Same rotation for collision -->
+      <geometry>
+        <cylinder length="0.1" radius="0.05"/>
+      </geometry>
+    </collision>
+
+    <!-- Second Cylinder (Part of the X) -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 -0.785398"/> <!-- Rotate -45 degrees -->
+      <geometry>
+        <cylinder length="0.1" radius="0.05"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 -0.785398"/> <!-- Same rotation for collision -->
+      <geometry>
+        <cylinder length="0.1" radius="0.05"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+  </link>
+</robot>
