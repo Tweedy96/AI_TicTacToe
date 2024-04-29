@@ -9,10 +9,10 @@ import pybullet_data
 from collections import namedtuple
 from attrdict import AttrDict
 
-ROBOT_URDF_PATH = "./UR5/ur_e_description/urdf/ur5e.urdf"
+ROBOT_URDF_PATH = "./UR5/robots/urdf/ur5e_with_gripper.urdf"
 TABLE_URDF_PATH = os.path.join(pybullet_data.getDataPath(), "table/table.urdf")
-X_URDF_PATH = "./UR5/ur_e_description/urdf/x.urdf"
-O_URDF_PATH = "./UR5/ur_e_description/urdf/o.urdf"
+X_URDF_PATH = "./UR5/robots/urdf/x.urdf"
+O_URDF_PATH = "./UR5/robots/urdf/o.urdf"
 
 class UR5Sim():
   
@@ -34,11 +34,16 @@ class UR5Sim():
         pybullet.connect(pybullet.GUI)
         pybullet.setRealTimeSimulation(True)
         
-        self.end_effector_index = 7
+        self.end_effector_index = 8
         self.ur5 = self.load_robot()
         self.num_joints = pybullet.getNumJoints(self.ur5)
         
-        self.control_joints = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
+        self.control_joints = [
+            "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+            "wrist_1_joint", "wrist_2_joint", "wrist_3_joint",
+            "robotiq_85_left_knuckle_joint", "robotiq_85_right_knuckle_joint"
+        ]
+
         self.joint_type_list = ["REVOLUTE", "PRISMATIC", "SPHERICAL", "PLANAR", "FIXED"]
         self.joint_info = namedtuple("jointInfo", ["id", "name", "type", "lowerLimit", "upperLimit", "maxForce", "maxVelocity", "controllable"])
 
@@ -60,11 +65,18 @@ class UR5Sim():
 
         self.start()
 
+    def control_gripper(self, open_gripper=True):
+        # Assuming the joints are revolute and need a specific position to open/close
+        grip_position = 0.8 if open_gripper else 0.0  # Adjust these values based on actual gripper mechanics
+        pybullet.setJointMotorControl2(self.ur5, self.joints['robotiq_85_left_knuckle_joint'].id, pybullet.POSITION_CONTROL, targetPosition=grip_position)
+        pybullet.setJointMotorControl2(self.ur5, self.joints['robotiq_85_right_knuckle_joint'].id, pybullet.POSITION_CONTROL, targetPosition=grip_position)
+    
     def move_robot(self, row, col, callback=None):
         target_position = self.position_map.get((row, col))
         orientation = [0, math.pi/2, 0]
         joint_angles = self.calculate_ik(target_position, orientation)
         self.set_joint_angles(joint_angles)
+        print(joint_angles)
         if callback:
             callback()  # Call the callback function after the move is done
 
@@ -79,23 +91,24 @@ class UR5Sim():
     
 
     def set_joint_angles(self, joint_angles):
-        poses = []
-        indexes = []
-        forces = []
+        # Ensure joint_angles only includes angles for the joints we're controlling
+        # Assuming joint_angles is ordered according to self.control_joints
+        control_angles = [joint_angles[i] for i, name in enumerate(self.joint_type_list) if name in self.control_joints]
 
-        for i, name in enumerate(self.control_joints):
-            joint = self.joints[name]
-            poses.append(joint_angles[i])
-            indexes.append(joint.id)
-            forces.append(joint.maxForce)
+        indexes = [self.joints[name].id for name in self.control_joints if name in self.joints]
+        forces = [self.joints[name].maxForce for name in self.control_joints if name in self.joints]
+
+        print("Indexes:", indexes)
+        print("Control Angles:", control_angles)
+        if len(control_angles) != len(indexes):
+            print("Error: Mismatch in the number of joint angles and joint indices")
 
         pybullet.setJointMotorControlArray(
-            self.ur5, indexes,
-            pybullet.POSITION_CONTROL,
-            targetPositions=joint_angles,
-            targetVelocities=[0]*len(poses),
-            positionGains=[0.04]*len(poses), forces=forces
+            self.ur5, indexes, pybullet.POSITION_CONTROL,
+            targetPositions=control_angles,
+            forces=forces
         )
+
 
 
     def get_joint_angles(self):
@@ -121,12 +134,26 @@ class UR5Sim():
 
         joint_angles = pybullet.calculateInverseKinematics(
             self.ur5, self.end_effector_index, position, quaternion, 
-            jointDamping=[0.01]*6, upperLimits=upper_limits, 
+            jointDamping=[0.01] * self.num_joints, upperLimits=upper_limits, 
             lowerLimits=lower_limits, jointRanges=joint_ranges, 
             restPoses=rest_poses
         )
         return joint_angles
        
+    # def calculate_ik(self, position, orientation):
+    #     quaternion = pybullet.getQuaternionFromEuler(orientation)
+    #     lower_limits = [-math.pi]*6
+    #     upper_limits = [math.pi]*6
+    #     joint_ranges = [2*math.pi]*6
+    #     rest_poses = [0, -math.pi/2, -math.pi/2, -math.pi/2, -math.pi/2, 0]
+    #     joint_damping = [0.01] * self.num_joints  # Ensure this matches the actual joint count
+
+    #     joint_angles = pybullet.calculateInverseKinematics(
+    #         self.ur5, self.end_effector_index, position, quaternion, 
+    #         jointDamping=joint_damping  # Corrected use
+    #     )
+    #     return joint_angles
+
 
     def add_gui_sliders(self):
         self.sliders = []
