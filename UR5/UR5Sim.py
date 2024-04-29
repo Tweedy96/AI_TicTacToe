@@ -9,14 +9,15 @@ import pybullet_data
 from collections import namedtuple
 from attrdict import AttrDict
 
-ROBOT_URDF_PATH = "./ur_e_description/urdf/ur5e.urdf"
+ROBOT_URDF_PATH = "./UR5/ur_e_description/urdf/ur5e.urdf"
 TABLE_URDF_PATH = os.path.join(pybullet_data.getDataPath(), "table/table.urdf")
-X_URDF_PATH = "./ur_e_description/urdf/x.urdf"
-O_URDF_PATH = "./ur_e_description/urdf/o.urdf"
+X_URDF_PATH = "./UR5/ur_e_description/urdf/x.urdf"
+O_URDF_PATH = "./UR5/ur_e_description/urdf/o.urdf"
 
 class UR5Sim():
   
     def __init__(self, camera_attached=True):
+        print("Starting UR5 simulator")
         pybullet.connect(pybullet.GUI)
         pybullet.setRealTimeSimulation(True)
         
@@ -42,8 +43,17 @@ class UR5Sim():
             info = self.joint_info(jointID, jointName, jointType, jointLowerLimit, jointUpperLimit, jointMaxForce, jointMaxVelocity, controllable)
             if info.type == "REVOLUTE":
                 pybullet.setJointMotorControl2(self.ur5, info.id, pybullet.VELOCITY_CONTROL, targetVelocity=0, force=0)
-            self.joints[info.name] = info     
+            self.joints[info.name] = info 
 
+        # self.start()
+
+    def move_robot(self, row, col):
+        x = row * 0.2  # Example scaling factor
+        y = col * 0.2  # Example scaling factor
+        position = [x, y, 0.5]  # Adjust the z-coordinate as necessary
+        orientation = [0, -math.pi/2, 0]
+        joint_angles = self.calculate_ik(position, orientation)
+        self.set_joint_angles(joint_angles)
 
     def load_robot(self):
         flags = pybullet.URDF_USE_SELF_COLLISION
@@ -171,24 +181,15 @@ class UR5Sim():
         joint_angles = self.calculate_ik(position, [0, math.pi/2, 0])
         self.set_joint_angles(joint_angles)
 
-
-def demo_simulation():
-    """ Demo program showing how to use the sim """
-    sim = UR5Sim()
-    sim.add_gui_sliders()
-    x, y, z, Rx, Ry, Rz = sim.read_gui_sliders()
-    joint_angles = sim.calculate_ik([x, y, z], [Rx, Ry, Rz])
-    sim.set_joint_angles(joint_angles)
-
-    pickPlace = [(0.6, 0.4, 0.6), (0.6, 0.4, 0.3), (0.6, 0.4, 0.6), (0.6, -0.4, 0.6), (0.6, -0.4, 0.3), (0.6, -0.4, 0.6)]
-
-    while True:
-        for i in pickPlace:
-            sim.move_to(i)
-            sim.ur_camera()
-            sim.check_collisions()
-            time.sleep(1)
-            print(sim.get_current_pose())
-
-if __name__ == "__main__":
-    demo_simulation()
+    def start(self):
+        self.add_gui_sliders()
+        while True:
+            x, y, z, Rx, Ry, Rz = self.read_gui_sliders()
+            joint_angles = self.calculate_ik([x, y, z], [Rx, Ry, Rz])
+            self.set_joint_angles(joint_angles)
+            # print(self.get_current_pose())
+            # print(self.get_joint_angles())
+            # print(self.ur_camera())
+            # print(self.get_current_pose())
+            # print(self.get_joint_angles())
+            # print(self.ur_camera())
