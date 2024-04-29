@@ -1,5 +1,3 @@
-from UR5Sim import UR5Sim
-import AI
 from TicTacToeGUI import TicTacToeGUI
 from tkinter import Tk
 

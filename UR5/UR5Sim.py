@@ -17,6 +17,19 @@ O_URDF_PATH = "./UR5/ur_e_description/urdf/o.urdf"
 class UR5Sim():
   
     def __init__(self, camera_attached=True):
+
+        self.position_map = {
+            (0, 0): (0.5, -0.3, 0.2),
+            (0, 1): (0.5, 0.0, 0.2),
+            (0, 2): (0.5, 0.3, 0.2),
+            (1, 0): (0.8, -0.3, 0.2),
+            (1, 1): (0.8, 0.0, 0.2),
+            (1, 2): (0.8, 0.3, 0.2),
+            (2, 0): (1.1, -0.3, 0.2),
+            (2, 1): (1.1, 0.0, 0.2),
+            (2, 2): (1.1, 0.3, 0.2),
+        }
+
         print("Starting UR5 simulator")
         pybullet.connect(pybullet.GUI)
         pybullet.setRealTimeSimulation(True)
@@ -45,15 +58,16 @@ class UR5Sim():
                 pybullet.setJointMotorControl2(self.ur5, info.id, pybullet.VELOCITY_CONTROL, targetVelocity=0, force=0)
             self.joints[info.name] = info 
 
-        # self.start()
+        self.start()
 
-    def move_robot(self, row, col):
-        x = row * 0.2  # Example scaling factor
-        y = col * 0.2  # Example scaling factor
-        position = [x, y, 0.5]  # Adjust the z-coordinate as necessary
-        orientation = [0, -math.pi/2, 0]
-        joint_angles = self.calculate_ik(position, orientation)
+    def move_robot(self, row, col, callback=None):
+        target_position = self.position_map.get((row, col))
+        orientation = [0, math.pi/2, 0]
+        joint_angles = self.calculate_ik(target_position, orientation)
         self.set_joint_angles(joint_angles)
+        if callback:
+            callback()  # Call the callback function after the move is done
+
 
     def load_robot(self):
         flags = pybullet.URDF_USE_SELF_COLLISION
@@ -183,13 +197,6 @@ class UR5Sim():
 
     def start(self):
         self.add_gui_sliders()
-        while True:
-            x, y, z, Rx, Ry, Rz = self.read_gui_sliders()
-            joint_angles = self.calculate_ik([x, y, z], [Rx, Ry, Rz])
-            self.set_joint_angles(joint_angles)
-            # print(self.get_current_pose())
-            # print(self.get_joint_angles())
-            # print(self.ur_camera())
-            # print(self.get_current_pose())
-            # print(self.get_joint_angles())
-            # print(self.ur_camera())
+        x, y, z, Rx, Ry, Rz = self.read_gui_sliders()
+        joint_angles = self.calculate_ik([x, y, z], [Rx, Ry, Rz])
+        self.set_joint_angles(joint_angles)
