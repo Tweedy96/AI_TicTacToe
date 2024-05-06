@@ -1,88 +1,66 @@
 import tkinter as tk
 from tkinter import messagebox
-from UR5Sim import UR5Sim
-from TicTacToeAI import TicTacToeAI
-import time
+from TicTacToeEnv import TicTacToeEnv
+from TicTacToeAI import TicTacToeAI  # Assuming this class is updated to use DQN
 
 class TicTacToeGUI:
-    def __init__(self, master):
+    def __init__(self, master, env, model_path):
         self.master = master
-        master.title("Tic-Tac-Toe Robot Control")
-
-        self.robot_simulator = UR5Sim()
-        self.ai = TicTacToeAI()
-        self.current_player = 'X'
+        master.title("Tic-Tac-Toe")
+        self.env = env
+        self.ai = TicTacToeAI(env, model_path)  # Initialize the AI with the path to the trained model
+        self.current_player = 'X'  # Start with player X
         self.game_active = True
 
-        self.board = [['' for _ in range(3)] for _ in range(3)]
+        # Setup GUI components (buttons, reset button)
+        self.setup_gui()
+
+    def setup_gui(self):
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
         for i in range(3):
             for j in range(3):
-                btn = tk.Button(master, text='', font=('Arial', 20), height=2, width=4,
+                btn = tk.Button(self.master, text='', font=('Arial', 20), height=2, width=4,
                                 command=lambda i=i, j=j: self.handle_button_click(i, j))
                 btn.grid(row=i, column=j, sticky="nsew", padx=2, pady=2)
                 self.buttons[i][j] = btn
+        self.reset_button = tk.Button(self.master, text='Reset', command=self.reset_game)
+        self.reset_button.grid(row=3, column=0, columnspan=3, sticky="nsew")
 
-    def handle_button_click(self, row, col):
-        if self.game_active and self.buttons[row][col]["text"] == "":
-            self.make_move(row, col, self.current_player)
+    def handle_button_click(self, i, j):
+        if self.game_active and self.buttons[i][j]["text"] == "":
+            self.make_move(i, j, self.current_player)
+            if self.current_player == 'O':
+                self.ai_move()  # Trigger AI move if it's 'O's turn
 
-    def make_move(self, row, col, player):
-        self.buttons[row][col].config(text=player)
-        self.board[row][col] = player
-        self.robot_simulator.move_robot(row, col, callback=lambda: self.after_robot_move(player))
-
-    def after_robot_move(self, player):
-        if self.check_winner():
-            messagebox.showinfo("Game Over", f"{player} wins!")
-            self.reset_game()
-        elif self.is_board_full():
-            messagebox.showinfo("Game Over", "It's a draw!")
-            self.reset_game()
-        else:
-            self.switch_player()
-
-    def switch_player(self):
-        self.current_player = 'X' if self.current_player == 'O' else 'O'
-        if self.current_player == 'O' and self.game_active:
-            self.ai_move()
+    def make_move(self, i, j, player):
+        self.buttons[i][j].config(text=player)
+        self.env.board[i][j] = 1 if player == 'X' else -1
+        self.check_game_status()
 
     def ai_move(self):
-        if not self.game_active:
-            return
-
-        move = self.ai.find_random_move(self.board)
+        # AI finds the best move
+        move = self.ai.choose_best_move(self.env.board.flatten())
         if move:
-            time.sleep(1)
             self.make_move(*move, 'O')
 
-    def check_winner(self):
-        # Check rows, columns, and diagonals for a winner
-        for i in range(3):
-            if self.board[i][0] == self.board[i][1] == self.board[i][2] != '':
-                return True
-            if self.board[0][i] == self.board[1][i] == self.board[2][i] != '':
-                return True
-        if self.board[0][0] == self.board[1][1] == self.board[2][2] != '' or \
-           self.board[0][2] == self.board[1][1] == self.board[2][0] != '':
-            return True
-        return False
+    def check_game_status(self):
+        if self.env.check_winner():
+            messagebox.showinfo("Game Over", f"{self.current_player} wins!")
+            self.game_active = False
+        elif self.env.is_board_full():
+            messagebox.showinfo("Game Over", "It's a draw!")
+            self.game_active = False
+        self.switch_player()
 
-    def is_board_full(self):
-        # Check if the board is full (draw condition)
-        for row in self.board:
-            if '' in row:
-                return False
-        return True
+    def switch_player(self):
+        self.current_player = 'O' if self.current_player == 'X' else 'X'
 
     def reset_game(self):
-        # Reset the game board
-        for i in range(3):
-            for j in range(3):
-                self.buttons[i][j].config(text='')
-                self.board[i][j] = ''
-        self.current_player = 'X'  # X always starts
-    
+        self.env.reset()
+        self.game_active = True
+        for row in self.buttons:
+            for btn in row:
+                btn.config(text='')
+
     def start(self):
         self.master.mainloop()
-            
