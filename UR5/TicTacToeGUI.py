@@ -1,19 +1,31 @@
 import tkinter as tk
 from tkinter import messagebox
-from TicTacToeEnv import TicTacToeEnv
 from TicTacToeAI import TicTacToeAI  # Assuming this class is updated to use DQN
+from DQN import DQN_Solver
+from UR5Sim import UR5Sim
+import pybullet
+import time
+
+REPLAY_START_SIZE = 1000
 
 class TicTacToeGUI:
-    def __init__(self, master, env, model_path):
+    def __init__(self, master, agent, env, model_path, simulate):
         self.master = master
         master.title("Tic-Tac-Toe")
         self.env = env
         self.ai = TicTacToeAI(env, model_path)  # Initialize the AI with the path to the trained model
+        self.agent = agent
         self.current_player = 'X'  # Start with player X
         self.game_active = True
-
-        # Setup GUI components (buttons, reset button)
+        self.robot = self.connect_to_robot()         
+        self.simulate = simulate
         self.setup_gui()
+
+    def connect_to_robot(self):
+        if pybullet.isConnected():  # Check if there is an existing connection
+            pybullet.disconnect()  # Disconnect if there is
+
+        return UR5Sim()  # Establish a new connection and return the robot
 
     def setup_gui(self):
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
@@ -35,13 +47,26 @@ class TicTacToeGUI:
     def make_move(self, i, j, player):
         self.buttons[i][j].config(text=player)
         self.env.board[i][j] = 1 if player == 'X' else -1
+        if self.simulate:
+            position = 3 * i + j
+            self.robot.move_robot(position)
+            time.sleep(1)
         self.check_game_status()
 
     def ai_move(self):
-        # AI finds the best move
-        move = self.ai.choose_best_move(self.env.board.flatten())
-        if move:
-            self.make_move(*move, 'O')
+        # Get current state from environment
+        state = self.env.get_state()
+        # Decide action
+        action = self.ai.choose_best_move(state)
+        # Apply action to the environment
+        next_state, reward, done, _ = self.env.step(action)
+        # Save transition to replay buffer
+        self.agent.memory.add(state, action, reward, next_state, done)
+        # Learn from the buffer if conditions are met
+        if self.agent.memory.mem_count > REPLAY_START_SIZE:
+            self.agent.learn()
+        self.make_move(*divmod(action, 3), 'O')
+    
 
     def check_game_status(self):
         if self.env.check_winner():

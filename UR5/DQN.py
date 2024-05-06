@@ -1,15 +1,10 @@
-import gym
 import pybullet as p
 import numpy as np
 import math
-from collections import defaultdict
-import pickle
 import torch
 import random
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import matplotlib.pyplot as plt
 
 # Hyper parameters that will be used in the DQN algorithm
 LEARNING_RATE = 0.00025
@@ -40,7 +35,6 @@ class Network(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
-
 
 class ReplayBuffer:
     def __init__(self, env):
@@ -78,10 +72,14 @@ class ReplayBuffer:
 class DQN_Solver:
     def __init__(self, env):
         self.memory = ReplayBuffer(env)
-        self.policy_network = Network(env)
-        self.target_network = Network(env)
+        # Adjust the initialization to pass correct dimensions
+        input_dim = np.prod(env.observation_space.shape)  # Assuming observation_space.shape is available and correct
+        output_dim = env.action_space.n  # Assuming action_space.n gives the number of discrete actions
+        self.policy_network = Network(input_dim, output_dim)
+        self.target_network = Network(input_dim, output_dim)
         self.target_network.load_state_dict(self.policy_network.state_dict())
         self.learn_count = 0
+
 
     def choose_action(self, observation):
         if self.memory.mem_count > REPLAY_START_SIZE:

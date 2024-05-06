@@ -20,7 +20,7 @@ class TicTacToeAI:
         with torch.no_grad():
             q_values = self.model(state)
         action = torch.argmax(q_values).item()
-        return divmod(action, 3)  # Convert flat index to row, col
+        return action  # Convert flat index to row, col
 
     def find_random_move(self, board):
         # Create a list of empty spots
@@ -29,3 +29,4 @@ class TicTacToeAI:
         if empty_spots:
             return random.choice(empty_spots)
         return None
+    

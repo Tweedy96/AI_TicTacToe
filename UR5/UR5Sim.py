@@ -1,9 +1,7 @@
 import os
 import math 
 import numpy as np
-import time
 import pybullet 
-import random
 from datetime import datetime
 import pybullet_data
 from collections import namedtuple
@@ -79,7 +77,7 @@ class UR5Sim():
         pybullet.setJointMotorControl2(self.ur5, self.joints['robotiq_85_right_knuckle_joint'].id, pybullet.POSITION_CONTROL, targetPosition=grip_position)
     
     def move_robot(self, num, callback=None):
-        target_position = self.position_map.get(num)
+        target_position = self.position_map[num]
         orientation = [0, math.pi/2, 0]
         joint_angles = self.calculate_ik(target_position, orientation)
         self.set_joint_angles(joint_angles)
@@ -210,10 +208,6 @@ class UR5Sim():
             if joint_info[12].decode('utf-8') == link_name:
                 return i
         return -1  # Return -1 if not found
-    
-    def move_to(self, position):
-        joint_angles = self.calculate_ik(position, [0, math.pi/2, 0])
-        self.set_joint_angles(joint_angles)
 
     def start(self):
         self.add_gui_sliders()

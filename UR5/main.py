@@ -1,15 +1,12 @@
 from TicTacToeGUI import TicTacToeGUI
 from tkinter import Tk
 from DQN import DQN_Solver
-from DQN import Network
 from TicTacToeEnv import TicTacToeEnv
 import torch
-import random
-import numpy as np
 import matplotlib.pyplot as plt
 
 REPLAY_START_SIZE = 1000
-EPISODES = 10000
+EPISODES = 2000
 
 best_reward = 0
 average_reward = 0
@@ -17,12 +14,7 @@ episode_history = []
 episode_reward_history = []
 model_path = "tictactoe_dqn.pth"
 
-def train_dqn(episodes, env):
-    agent = DQN_Solver(env)
-    # agent.action_space.seed(0)
-    # random.seed(0)
-    # np.random.seed(0)
-    # torch.manual_seed(0)
+def train_dqn(episodes, agent, env):
     episode_batch_score = 0
     episode_reward = 0
     total_reward = 0
@@ -74,15 +66,16 @@ def train_dqn(episodes, env):
   
 def main():
     training = False
-    render = True
+    simulate = True
 
-    env = TicTacToeEnv(render)  # Initialize the Tic-Tac-Toe environment
+    env = TicTacToeEnv(simulate)  # Initialize the Tic-Tac-Toe environment
+    agent = DQN_Solver(env)
 
     if training:
-        train_dqn(EPISODES, env)
+        train_dqn(EPISODES, agent, env)
     else:
         root = Tk()
-        gui = TicTacToeGUI(root, env, model_path)
+        gui = TicTacToeGUI(root, agent, env, model_path, simulate)
         gui.start()
 
 if __name__ == '__main__':
