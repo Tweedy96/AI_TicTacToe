@@ -13,26 +13,34 @@ class TicTacToeEnv:
 
     def reset(self):
         self.board.fill(0)
-        self.current_player = 1
         self.done = False
         return self.board.flatten()
+    
+    def valid_actions(self):
+        return [i for i in range(9) if self.board.flatten()[i] == 0]
 
-    def step(self, action):
+    def step(self, action, player):
+        self.current_player = player
         row, col = divmod(action, 3)
         if self.board[row, col] == 0:
             self.board[row, col] = self.current_player
             if self.check_winner():
                 self.done = True
-                reward = 1.0  # Reward for winning
+                if self.current_player == 1:
+                    print("X wins!")
+                    reward = -50.0
+                else:
+                    print("O wins!")
+                    reward = 50.0  # Reward for winning
             elif self.is_board_full():
+                print("It's a draw!")
                 self.done = True
-                reward = 0  # Draw
+                reward = 10  # Draw
             else:
-                self.current_player *= -1
-                reward = 0
+                reward = -5
         else:
-            reward = -1  # Penalize invalid move
-            self.done = True  # End the game on an invalid move
+            print("Invalid move")
+            reward = -1.0
         
         return self.board.flatten(), reward, self.done, {}
 
@@ -55,3 +63,6 @@ class TicTacToeEnv:
     
     def get_state(self):
         return self.board.flatten()
+    
+    def close(self):
+        pass

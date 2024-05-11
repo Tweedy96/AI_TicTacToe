@@ -59,7 +59,7 @@ class TicTacToeGUI:
         # Decide action
         action = self.ai.choose_best_move(state)
         # Apply action to the environment
-        next_state, reward, done, _ = self.env.step(action)
+        next_state, reward, done, _ = self.env.step(action, -1)
         # Save transition to replay buffer
         self.agent.memory.add(state, action, reward, next_state, done)
         # Learn from the buffer if conditions are met
