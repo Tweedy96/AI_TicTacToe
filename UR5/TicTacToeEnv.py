@@ -26,22 +26,21 @@ class TicTacToeEnv:
             self.board[row, col] = self.current_player
             if self.check_winner():
                 self.done = True
-                if self.current_player == 1:
-                    print("X wins!")
-                    reward = -50.0
+                if self.current_player == -1:
+                    print("AI wins!")
+                    reward = 50
                 else:
-                    print("O wins!")
-                    reward = 50.0  # Reward for winning
+                    print("AI loses!")
+                    reward = -50
             elif self.is_board_full():
-                print("It's a draw!")
                 self.done = True
-                reward = 10  # Draw
+                reward = 25  # Draw, neutral reward
+                print("Its a draw!")
             else:
-                reward = -5
+                reward = -5  # Encourage more moves
         else:
-            print("Invalid move")
-            reward = -1.0
-        
+            reward = -50  # Penalize illegal moves less harshly
+            print("Illegal move!")
         return self.board.flatten(), reward, self.done, {}
 
     def check_winner(self):

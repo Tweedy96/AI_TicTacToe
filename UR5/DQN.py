@@ -8,18 +8,18 @@ import torch.nn as nn
 import torch.optim as optim
 
 # Hyper parameters that will be used in the DQN algorithm
-LEARNING_RATE = 0.00025
-MEM_SIZE = 50000
-REPLAY_START_SIZE = 10000
-BATCH_SIZE = 32
+LEARNING_RATE = 0.00001
+MEM_SIZE = 10000
+REPLAY_START_SIZE = 500
+BATCH_SIZE = 1000
 GAMMA = 0.99
-EPS_START = 0.1
-EPS_END = 0.0001
-EPS_DECAY = 4 * MEM_SIZE
-MEM_RETAIN = 0.1
-NETWORK_UPDATE_ITERS = 5000
-FC1_DIMS = 128
-FC2_DIMS = 128
+EPS_START = 0.9
+EPS_END = 0.05
+EPS_DECAY = 100 * MEM_SIZE
+MEM_RETAIN = 0.001
+NETWORK_UPDATE_ITERS = 10
+FC1_DIMS = 64
+FC2_DIMS = 64
 
 space_0 = 0.12
 space_1 = 0.1
@@ -88,33 +88,27 @@ class ReplayBuffer:
 class DQN_Solver:
     def __init__(self, env):
         self.memory = ReplayBuffer(env)
-        # Adjust the initialization to pass correct dimensions
-        input_dim = np.prod(env.observation_space.shape)  # Assuming observation_space.shape is available and correct
-        output_dim = env.action_space.n  # Assuming action_space.n gives the number of discrete actions
         self.policy_network = Network(env)
         self.target_network = Network(env)
         self.target_network.load_state_dict(self.policy_network.state_dict())
         self.learn_count = 0
 
-    def choose_action(self, env, observation):
+    def choose_action(self, observation, valid_actions):
         if self.memory.mem_count > REPLAY_START_SIZE:
             eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * self.learn_count / EPS_DECAY)
         else:
             eps_threshold = 1.0
 
-        valid_actions = env.valid_actions()
-
         if random.random() < eps_threshold:
-            action_probs = [space_0, space_1, space_2, space_3, space_4, space_5, space_6, space_7, space_8]
-            action = np.random.choice(range(self.policy_network.action_space), p=action_probs)
+            action = random.choice(valid_actions)
         else:
             state = torch.tensor(observation, dtype=torch.float32).unsqueeze(0)
             self.policy_network.eval()
             with torch.no_grad():
                 q_values = self.policy_network(state)
-
-            valid_q_values = q_values[0, valid_actions]
-            action = valid_actions[torch.argmax(valid_q_values).item()]
+            # Filter q_values for valid actions
+            q_values_valid = q_values[0, valid_actions]
+            action = valid_actions[torch.argmax(q_values_valid).item()]
         return action
 
     def learn(self):
@@ -144,6 +138,7 @@ class DQN_Solver:
 
         if self.learn_count % NETWORK_UPDATE_ITERS == NETWORK_UPDATE_ITERS - 1:
             self.update_target_network()
+        return loss.item()
 
     def update_target_network(self):
         self.target_network.load_state_dict(self.policy_network.state_dict())
