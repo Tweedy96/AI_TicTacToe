@@ -7,7 +7,7 @@ This project simulates a UR5E robot arm that plays Tic-Tac-Toe. The robot uses a
 ## Features
 UR5E Robot Simulation: The UR5E robot arm is simulated in PyBullet, performing moves on a Tic-Tac-Toe board.
 Reinforcement Learning: The robot is trained using a DQN to make optimal moves.
-Training Visualization: Real-time visualization of training progress and reward metrics.
+Training Visualisation: Real-time visualisation of training progress and reward metrics.
 Error Handling: Ensures the robot only makes valid moves during the game.
 How to Run
 To run the simulation, execute the following command:
@@ -44,11 +44,13 @@ Epsilon Decay: 4 * Memory Size
 Network Update Iters: 5000
 FC1 Dims: 64
 FC2 Dims: 64
-Demo
-Embed demo video here
+
+## Demo
+
+https://github.com/Tweedy96/AI_TicTacToe/assets/126052026/ef389d88-a67c-4a3b-b86e-ec4919278667
 
 ## CNN for Image Detection
-Initially, we attempted to introduce a Convolutional Neural Network (CNN) for image detection to recognize the state of the Tic-Tac-Toe board. The idea was to allow the robot to interpret the game board visually and make moves based on this interpreted state. However, due to challenges in achieving reliable image detection, we decided to omit this feature from the final project.
+Initially, we attempted to introduce a Convolutional Neural Network (CNN) for image detection to recognise the state of the Tic-Tac-Toe board. The idea was to allow the robot to interpret the game board visually and make moves based on this interpreted state. However, due to challenges in achieving reliable image detection, we decided to omit this feature from the final project.
 
 ## Future Work
 Improve AI Strategy: Further tuning of hyperparameters and reward structure to enhance the AI's performance.
